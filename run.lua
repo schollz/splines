@@ -6,16 +6,42 @@ if not string.find(package.cpath,"/home/we/dust/code/aaspline/lib/") then
   package.cpath=package.cpath..";/home/we/dust/code/aaspline/lib/?.so"
 end
 local ts = require("tinysplinelua53")
+local MusicUtil = require "musicutil"
 
+engine.name="PolyPerc"
 points={1,32,45,60,128,32}
 pos={1,32}
 
 function init()
+
+  notes = MusicUtil.generate_scale_of_length(60, 5, 16)
+  local notes1 = MusicUtil.generate_scale_of_length(60, 5, 16)
+  for i = 0,15 do
+    table.insert(notes, notes1[16 - i])
+  end
+  tab.print(notes)
+
   clock.run(function()
     while true do
       clock.sleep(1/15)
       redraw()
     end
+  end)
+  
+  clock.run(function()
+      step=0
+      while true do
+        clock.sync(1)
+        print("beat")
+        step=step+1
+        if step > 128 then
+          step =1 
+        end
+        local spoints=points_to_spline(add_point(points,pos))
+        print(spoints[step][2])
+        local note_ind=util.clamp(math.floor(util.linlin(1,128,1,#notes+1,spoints[step][2])),1,#notes)
+        engine.hz(notes[note_ind])
+      end
   end)
 end
 
