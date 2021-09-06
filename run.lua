@@ -7,13 +7,21 @@ if not string.find(package.cpath,"/home/we/dust/code/aaspline/lib/") then
 end
 local ts = require("tinysplinelua53")
 local MusicUtil = require "musicutil"
-
+local k2on=false
 engine.name="PolyPerc"
-curves={step=0}
+curves={step=1}
 points={1,32,128,32}
 pos={1,32}
 
 function init()
+
+  points=add_point(points,{math.random(10,120),math.random(48,72)})
+  points=add_point(points,{math.random(10,120),math.random(48,72)})
+  points=add_point(points,{math.random(10,120),math.random(48,72)})
+  points=add_point(points,{math.random(1,128),math.random(-12,76)})
+  points=add_point(points,{math.random(1,128),math.random(-12,76)})
+  points=add_point(points,{math.random(1,128),math.random(-12,76)})
+  points=add_point(points,{math.random(1,128),math.random(-12,76)})
 
   notes = MusicUtil.generate_scale_of_length(24, 5, 48)
 
@@ -23,7 +31,7 @@ function init()
       redraw()
     end
   end)
-  
+
   curves.step=0
   clock.run(function()
       while true do
@@ -32,8 +40,8 @@ function init()
         if curves.step > 128 then
           curves.step=1 
         end
-        local spoints=points_to_spline(add_point(points,pos))
-        local y=util.clamp(math.floor(spoints[curves.step][2]),1,64)
+        local spoints=current_points()
+        local y=math.floor(spoints[curves.step][2])
         local note_ind=util.clamp(math.floor(util.linlin(1,64,1,#notes+1,65-y)),1,#notes)
         print(y,notes[note_ind])
         engine.hz(MusicUtil.note_num_to_freq(notes[note_ind]))
@@ -49,8 +57,10 @@ function enc(k,d)
     elseif pos[1]<1 then
       pos[1]=1
     end
-    spoints=points_to_spline(points)
-    pos[2]=spoints[pos[1]][2]
+    if not k2on then
+      local spoints=points_to_spline(points)
+      pos[2]=spoints[pos[1]][2]
+    end
   elseif k==3 then
     pos[2]=pos[2]-d
     if pos[2]>64*2 then
@@ -63,13 +73,16 @@ end
 
 
 function key(k,z)
-  if k==2 and z==1 then
-    points=add_point(points,pos)
+  if k==2 then
+    k2on=(z==1)
+    if z==0 then
+      points=add_point(points,pos)
+    end
   end
 end
 
 function points_to_spline(p)
-  cubic=3
+  local cubic=3
   if #p==4 then
     cubic=1
   elseif #p==6 then
@@ -78,10 +91,28 @@ function points_to_spline(p)
   local spline = ts.BSpline(#p/2,2,cubic,ts.CLAMPED)
   spline.control_points=p
   beziers = spline:derive():to_beziers()
-  spline_points={}
+  local xys={}
+  local xs={}
   for i=0,127 do
     -- table.insert(spline_points,beziers(i/127).result)
-    table.insert(spline_points,spline:eval(i/127).result)
+    local xy=spline:eval(i/127).result
+    local x=math.floor(util.round(xy[1]))
+    xys[x]=util.round(xy[2])
+    table.insert(xs,x)
+  end
+
+  table.sort(xs)
+  local spline_points={}
+  for i=1,128 do
+    if xys[i]==nil then
+      if i==1 then
+        spline_points[i]={p[1],p[2]}
+      else
+        spline_points[i]={spline_points[i-1][1],spline_points[i-1][2]}
+      end
+    else
+      spline_points[i]={i,xys[i]}
+    end
   end
   return spline_points
 end
@@ -106,6 +137,10 @@ function add_point(ps,p)
   return ps2
 end
 
+function current_points()
+  return points_to_spline(k2on and add_point(points,pos) or points)
+end
+
 function redraw()
   screen.clear()
 
@@ -114,18 +149,18 @@ function redraw()
   screen.line(curves.step,64)
   screen.stroke()
 
+  local spoints=current_points()
 
-  local spoints=points_to_spline(add_point(points,pos))
+  if curves.step>0 then
+    screen.circle(curves.step,spoints[curves.step][2],2)
+    screen.fill()
+  end
+
   for i,point in ipairs(spoints) do
-    ps={math.floor(point[1]),math.floor(point[2])}
-    if i > 1 then 
-      screen.level(7)
-      screen.pixel(ps[1],ps[2])
-      screen.fill()
-      -- screen.line(ps[1],ps[2])
-      -- screen.stroke()
-      -- screen.move(ps[1],ps[2])
-    end
+    local ps={point[1],point[2]}
+    screen.level(7)
+    screen.pixel(i,ps[2])
+    screen.fill()
   end
 
   local placed={}
