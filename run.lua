@@ -9,17 +9,13 @@ local ts = require("tinysplinelua53")
 local MusicUtil = require "musicutil"
 
 engine.name="PolyPerc"
-points={1,32,45,60,128,32}
+curves={step=0}
+points={1,32,128,32}
 pos={1,32}
 
 function init()
 
-  notes = MusicUtil.generate_scale_of_length(60, 5, 16)
-  local notes1 = MusicUtil.generate_scale_of_length(60, 5, 16)
-  for i = 0,15 do
-    table.insert(notes, notes1[16 - i])
-  end
-  tab.print(notes)
+  notes = MusicUtil.generate_scale_of_length(24, 5, 48)
 
   clock.run(function()
     while true do
@@ -28,19 +24,19 @@ function init()
     end
   end)
   
+  curves.step=0
   clock.run(function()
-      step=0
       while true do
-        clock.sync(1)
-        print("beat")
-        step=step+1
-        if step > 128 then
-          step =1 
+        clock.sync(1/4)
+        curves.step=curves.step+1
+        if curves.step > 128 then
+          curves.step=1 
         end
         local spoints=points_to_spline(add_point(points,pos))
-        print(spoints[step][2])
-        local note_ind=util.clamp(math.floor(util.linlin(1,128,1,#notes+1,spoints[step][2])),1,#notes)
-        engine.hz(notes[note_ind])
+        local y=util.clamp(math.floor(spoints[curves.step][2]),1,64)
+        local note_ind=util.clamp(math.floor(util.linlin(1,64,1,#notes+1,65-y)),1,#notes)
+        print(y,notes[note_ind])
+        engine.hz(MusicUtil.note_num_to_freq(notes[note_ind]))
       end
   end)
 end
@@ -112,19 +108,42 @@ end
 
 function redraw()
   screen.clear()
+
+  screen.level(1)
+  screen.move(curves.step,1)
+  screen.line(curves.step,64)
+  screen.stroke()
+
+
   local spoints=points_to_spline(add_point(points,pos))
-  screen.move(spoints[1][1],spoints[1][2])
-  local placed={}
   for i,point in ipairs(spoints) do
+    ps={math.floor(point[1]),math.floor(point[2])}
     if i > 1 then 
-      ps={math.floor(point[1]),math.floor(point[2])}
       screen.level(7)
-      screen.line(ps[1],ps[2])
-      screen.stroke()
-      screen.move(ps[1],ps[2])
-      
-      for j=1,#points,2 do
-        if (points[j]==ps[1] or pos[1]==ps[1]) and placed[ps[1]]==nil then
+      screen.pixel(ps[1],ps[2])
+      screen.fill()
+      -- screen.line(ps[1],ps[2])
+      -- screen.stroke()
+      -- screen.move(ps[1],ps[2])
+    end
+  end
+
+  local placed={}
+  local placedcur=false
+  for i,point in ipairs(spoints) do
+    ps={math.floor(point[1]),math.floor(point[2])}
+    for j=1,#points,2 do
+      if (points[j]==ps[1] or pos[1]==ps[1]) and placed[ps[1]]==nil then
+        if pos[1]==ps[1] and not placedcur then
+          screen.level(0)
+          screen.circle(ps[1],ps[2],3)
+          screen.fill()
+          screen.level(7)
+          screen.circle(ps[1],ps[2],3)
+          screen.stroke()
+          placedcur=true
+        end
+        if points[j]==ps[1] then
           screen.level(7)
           screen.circle(ps[1],ps[2],2)
           screen.fill()
@@ -133,17 +152,6 @@ function redraw()
       end
     end
   end
-  -- -- current position
-  -- for i=1,#points,2 do
-  --     screen.level(15)
-  --   screen.move(points[i],points[i+1])
-  --   screen.circle(points[i],points[i+1],2)
-  --   screen.fill()
-  -- end
-  -- screen.level(15)
-  -- screen.move(pos[1],pos[2])
-  -- screen.circle(pos[1],pos[2],2)
-  -- screen.fill()
 
   screen.update()
 end
