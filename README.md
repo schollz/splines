@@ -1,6 +1,8 @@
 # splines
 
-everything is a spline.
+make music by drawing music.
+
+everything is a spline:
 
 - note pitch
 - time between notes
