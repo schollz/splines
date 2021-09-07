@@ -144,6 +144,10 @@ end
 function redraw()
   screen.clear()
 
+  screen.move(2,50)
+  screen.text("hold K2, move E2/E3")
+  screen.move(2,58)
+  screen.text("release K2 to place")
   screen.level(1)
   screen.move(curves.step,1)
   screen.line(curves.step,64)
