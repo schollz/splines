@@ -2,8 +2,8 @@
 -- cmake --build .
 print(_VERSION)
 
-if not string.find(package.cpath,"/home/we/dust/code/aaspline/lib/") then
-  package.cpath=package.cpath..";/home/we/dust/code/aaspline/lib/?.so"
+if not string.find(package.cpath,"/home/we/dust/code/splines/lib/") then
+  package.cpath=package.cpath..";/home/we/dust/code/splines/lib/?.so"
 end
 local ts = require("tinysplinelua53")
 local MusicUtil = require "musicutil"
